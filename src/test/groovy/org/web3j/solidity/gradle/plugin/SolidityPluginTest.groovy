@@ -345,6 +345,42 @@ class SolidityPluginTest {
         assertEquals(SUCCESS, success.task(":compileSolidity").getOutcome())
     }
 
+    /**
+     * Regression test for issue #44 ("Tasks defined in incorrect order, resulting in
+     * 'resolveSolidity' not being found").
+     *
+     * <p>The plugin must register {@code resolveSolidity} (and the compile tasks) during
+     * {@code apply()}, not defer it to an {@code afterEvaluate} block. Otherwise a consumer build
+     * script — or another applied plugin — that touches the task graph while the project is still
+     * being configured fails with "Task with name 'resolveSolidity' not found". Here we apply an
+     * additional plugin (as the original reporter did) and look the tasks up during configuration;
+     * that lookup throws if their registration is ever moved back behind an {@code afterEvaluate}.
+     */
+    @Test
+    void resolveSolidityTaskIsRegisteredDuringConfiguration() throws IOException {
+        Files.writeString(buildFile, """
+            plugins {
+               id 'application'
+               id 'org.web3j.solidity'
+            }
+            // Resolved while the build script is still being configured — fails fast with
+            // UnknownTaskException if the tasks are not registered eagerly during apply().
+            tasks.named('extractSolidityImports').get()
+            tasks.named('resolveSolidity').get()
+            tasks.named('compileSolidity').get()
+        """)
+
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments("help", "-s", "--configuration-cache")
+                .withPluginClasspath()
+                .forwardOutput().with {
+                    gradleVersionUnderTest ? it.withGradleVersion(gradleVersionUnderTest) : it
+                }.build()
+
+        assertEquals(SUCCESS, result.task(":help").getOutcome())
+    }
+
     private BuildResult build() {
         return GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())

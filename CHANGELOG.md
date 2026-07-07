@@ -11,7 +11,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Features
 
-*
+* Add `solidity.compilerEnabled` flag to apply the plugin without the Solidity compiler or the Node/npm integration [#74](https://github.com/LFDT-web3j/web3j-solidity-gradle-plugin/issues/74)
 
 ### BREAKING CHANGES
 
